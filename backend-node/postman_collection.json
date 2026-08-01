@@ -1,0 +1,623 @@
+{
+  "info": {
+    "_postman_id": "bookworm-api",
+    "name": "BookWorm API - Complete",
+    "description": "CRUD API for BookWorm - Tags, Users, and Books",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Tags",
+      "item": [
+        {
+          "name": "Create Tag",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tag_name\": \"Fiction\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/tags",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["tags"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Tag 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tag_name\": \"Science Fiction\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/tags",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["tags"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Tag 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tag_name\": \"Mystery\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/tags",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["tags"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk Create Tags",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tags\": [\n    \"Adventure\",\n    \"Romance\",\n    \"Thriller\",\n    \"Biography\",\n    \"History\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/tags/bulk",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["tags", "bulk"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Tags",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/tags?limit=100&offset=0",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["tags"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tag by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/tags/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["tags", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Tag",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tag_name\": \"Fantasy Fiction\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/tags/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["tags", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Tag",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/tags/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["tags", "1"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Books",
+      "item": [
+        {
+          "name": "Create Book",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_SUPABASE_JWT_TOKEN"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"The Great Gatsby\",\n  \"genre\": \"Fiction\",\n  \"description\": \"A classic American novel\",\n  \"cover_image\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/books",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["books"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Book 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_SUPABASE_JWT_TOKEN"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Dune\",\n  \"genre\": \"Science Fiction\",\n  \"description\": \"Epic science fiction novel\",\n  \"cover_image\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/books",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["books"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Books",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/books",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["books"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Books by Title",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/books?limit=100&offset=0&search=harry",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["books"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "search",
+                  "value": "harry"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Filter Books by Genre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/books?limit=100&offset=0&genre=Fiction",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["books"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "genre",
+                  "value": "Fiction"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search & Filter Combined",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/books?limit=100&offset=0&search=harry&genre=Fiction",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["books"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "search",
+                  "value": "harry"
+                },
+                {
+                  "key": "genre",
+                  "value": "Fiction"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Book by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/books/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["books", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Books by Firebase UID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/books/user/user-123",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["books", "user", "user-123"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Book",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_SUPABASE_JWT_TOKEN"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"The Great Gatsby - Updated\",\n  \"genre\": \"Classic Fiction\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/books/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["books", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Book",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_SUPABASE_JWT_TOKEN"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3000/books/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["books", "1"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firebase_uid\": \"user-123\",\n  \"email\": \"john@example.com\",\n  \"full_name\": \"John Doe\",\n  \"bio\": \"A passionate reader and book lover\",\n  \"city\": \"San Francisco\",\n  \"favorite_genre\": \"Science Fiction\",\n  \"profile_image\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/users",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create User 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firebase_uid\": \"user-456\",\n  \"email\": \"sarah@example.com\",\n  \"full_name\": \"Sarah Johnson\",\n  \"bio\": \"Mystery and thriller enthusiast\",\n  \"city\": \"New York\",\n  \"favorite_genre\": \"Mystery\",\n  \"profile_image\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/users",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create User 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firebase_uid\": \"user-789\",\n  \"email\": \"mike@example.com\",\n  \"full_name\": \"Mike Chen\",\n  \"bio\": \"Fantasy lover and book collector\",\n  \"city\": \"Seattle\",\n  \"favorite_genre\": \"Fantasy\",\n  \"profile_image\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/users",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/users",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/users/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["users", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by Firebase UID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/users/firebase/user-123",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["users", "firebase", "user-123"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by Email",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/users/email/john@example.com",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["users", "email", "john@example.com"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"John Doe Updated\",\n  \"bio\": \"Updated bio - Love reading sci-fi and fantasy\",\n  \"city\": \"Los Angeles\",\n  \"favorite_genre\": \"Science Fiction & Fantasy\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/users/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["users", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/users/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["users", "1"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "1",
+      "type": "string"
+    }
+  ]
+}

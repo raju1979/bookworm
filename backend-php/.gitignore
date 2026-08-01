@@ -1,0 +1,8 @@
+.env
+.env.development
+.env.production
+tmp/*
+!tmp/.gitkeep
+.DS_Store
+bookworm-hostinger.zip
+dist/

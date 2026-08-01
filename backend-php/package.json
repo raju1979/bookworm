@@ -1,0 +1,10 @@
+{
+  "name": "bookworm-backend-php",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "bash scripts/serve.sh",
+    "pack": "node scripts/pack-hostinger.mjs",
+    "pack:web": "node scripts/pack-hostinger.mjs --with-web"
+  }
+}

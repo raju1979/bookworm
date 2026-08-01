@@ -1,0 +1,45 @@
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dependencies & builds
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.angular/
+coverage/
+*.tsbuildinfo
+
+# Env & secrets (keep *.example committed)
+.env
+.env.*
+!.env.example
+!.env.*.example
+!**/.env.example
+!**/.env.development.example
+!**/.env.production.example
+
+# Local / deploy artifacts
+*.local
+backend-php/dist/
+backend-php/bookworm-hostinger.zip
+backend-php/tmp/*
+!backend-php/tmp/.gitkeep
+backend-php/tmp/firebase_jwks.json
+
+# Tooling / analysis
+.understand-anything/
+.claude/
+.cursor/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Hostinger copy accidentally at repo root (deploy-only)
+/.htaccess

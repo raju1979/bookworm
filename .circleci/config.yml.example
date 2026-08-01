@@ -1,0 +1,74 @@
+# Example CircleCI pipeline — rename to config.yml when ready.
+# Deploys frontend dist + backend-php to Hostinger over FTP/SFTP.
+#
+# Required CircleCI project env vars (Project Settings → Environment Variables):
+#   HOSTINGER_FTP_HOST     e.g. ftp.ajarafashion.com or srv1674.hstgr.io
+#   HOSTINGER_FTP_USER
+#   HOSTINGER_FTP_PASS
+#   HOSTINGER_REMOTE_DIR   e.g. public_html/bookworm
+#
+# Also store production secrets as CircleCI env vars and write .env before pack:
+#   DB_PASSWORD, etc. — never commit real .env.production
+
+version: 2.1
+
+orbs:
+  node: circleci/node@5.2.0
+
+jobs:
+  build-and-deploy:
+    docker:
+      - image: cimg/node:22.11
+    steps:
+      - checkout
+
+      - node/install-packages:
+          app-dir: frontend
+
+      - run:
+          name: Build frontend (production)
+          command: |
+            cd frontend
+            npm run build:prod
+
+      - run:
+          name: Pack PHP backend (production zip layout)
+          command: |
+            cd backend-php
+            # Write production env from CircleCI secrets (example)
+            cat > .env.production <<EOF
+            NODE_ENV=production
+            APP_ENV=production
+            DB_HOST=localhost
+            DB_PORT=3306
+            DB_USER=${DB_USER}
+            DB_PASSWORD=${DB_PASSWORD}
+            DB_NAME=${DB_NAME}
+            FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+            APP_BASE=/bookworm/backend
+            CORS_ORIGINS=https://ajarafashion.com,https://www.ajarafashion.com
+            ENFORCE_ORIGIN_WHITELIST=true
+            ORIGIN_ALLOW_EMPTY=false
+            EOF
+            npm run pack:web
+
+      - run:
+          name: Deploy to Hostinger (FTP)
+          command: |
+            sudo apt-get update && sudo apt-get install -y lftp
+            lftp -c "
+              set ftp:ssl-allow no;
+              open -u $HOSTINGER_FTP_USER,$HOSTINGER_FTP_PASS $HOSTINGER_FTP_HOST;
+              mirror -R --delete --verbose backend-php/dist/stage $HOSTINGER_REMOTE_DIR || true;
+            "
+            # Prefer unpacking the zip on CI then mirroring folder contents:
+            # unzip -o backend-php/dist/bookworm-hostinger.zip -d /tmp/bookworm-deploy
+            # lftp mirror -R /tmp/bookworm-deploy $HOSTINGER_REMOTE_DIR
+
+workflows:
+  deploy:
+    jobs:
+      - build-and-deploy:
+          filters:
+            branches:
+              only: main
