@@ -81,7 +81,17 @@ jobs:
         working-directory: backend-php
         run: npm run pack:web
 
-      # Plain FTP — matches FileZilla (server has no FTP-TLS)
+      - name: Normalize FTP remote dir
+        id: ftpdir
+        env:
+          RAW_DIR: ${{ secrets.FTP_SERVER_DIR }}
+        run: |
+          set -euo pipefail
+          DIR="${RAW_DIR:?Missing secret FTP_SERVER_DIR}"
+          DIR="${DIR%/}/"
+          echo "server_dir=$DIR" >> "$GITHUB_OUTPUT"
+          echo "Using server-dir: $DIR"
+
       - name: Deploy to Hostinger (FTP)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -91,7 +101,7 @@ jobs:
           protocol: ftp
           port: 21
           local-dir: ./backend-php/dist/deploy/
-          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          server-dir: ${{ steps.ftpdir.outputs.server_dir }}
           dangerous-clean-slate: false
           exclude: |
             **/.git*
