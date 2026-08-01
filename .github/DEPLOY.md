@@ -1,24 +1,21 @@
 # GitHub Actions → Hostinger
 
-## Current mode: hello-world only
+## Deploy
 
-Uploads only `hello-world.txt` to `FTP_SERVER_DIR` (no site build).
-
-## Fix: `Name or service not known`
-
-`FTP_SERVER` must be a **hostname or IP** that resolves in DNS — copy it from **hPanel → Files → FTP Accounts → Hostname**.
-
-| Correct | Wrong |
-|---------|--------|
-| `ftp.ajarafashion.com` | `ftp://ftp.ajarafashion.com` |
-| `82.112.229.227` | `public_html` / `public_html/knowledge` |
-| | FTP username |
-| | folder path |
-
-Also set:
+On push to `main`, builds Vue + PHP and mirrors to `FTP_SERVER_DIR` over **plain FTP**.
 
 | Secret | Example |
 |--------|---------|
-| `FTP_USERNAME` | from FTP Accounts |
-| `FTP_PASSWORD` | from FTP Accounts |
-| `FTP_SERVER_DIR` | `knowledge/` |
+| `FTP_SERVER` | hostname or IP from hPanel FTP Accounts |
+| `FTP_USERNAME` | FTP user |
+| `FTP_PASSWORD` | … |
+| `FTP_SERVER_DIR` | `bookworm/` (if FTP login is already inside `public_html`) |
+| `DB_USER` / `DB_PASSWORD` / `DB_NAME` | MySQL |
+| `FIREBASE_PROJECT_ID` | `bookworm-6c9ec` |
+
+| FileZilla starts in | Set `FTP_SERVER_DIR` to |
+|---------------------|-------------------------|
+| site files (no `public_html` folder) | `bookworm/` |
+| account root with `public_html/` visible | `public_html/bookworm/` |
+
+Live URL: `https://ajarafashion.com/bookworm/`
