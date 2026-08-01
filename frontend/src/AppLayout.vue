@@ -2,7 +2,11 @@
   <div class="app-layout">
     <!-- Header -->
     <div class="header">
-      <h1>📚 Bookworm</h1>
+      <img
+        :src="logoUrl"
+        alt="BookWorm"
+        class="header-logo"
+      />
     </div>
 
     <!-- Page Content -->
@@ -33,6 +37,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import logoUrl from './assets/bookworm-logo.png';
 
 const route = useRoute();
 const activeTab = ref('home');
@@ -60,18 +65,23 @@ watch(
 .header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 15px 20px;
+  padding: 10px 20px;
   text-align: center;
   position: sticky;
   top: 0;
   z-index: 100;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.header h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
+.header-logo {
+  height: 44px;
+  width: auto;
+  max-width: min(280px, 70vw);
+  object-fit: contain;
+  display: block;
 }
 
 .page-content {

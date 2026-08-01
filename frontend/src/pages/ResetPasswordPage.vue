@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
     <div class="login-card">
-      <h1 class="logo">📚 Bookworm</h1>
+      <img :src="logoUrl" alt="BookWorm" class="logo" />
       <h2>Set new password</h2>
 
       <form @submit.prevent="handleReset" class="login-form">
@@ -56,6 +56,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { authService } from '../services/authService';
 import { getPasswordPolicyHint, validatePassword } from '../utils/passwordPolicy';
+import logoUrl from '../assets/bookworm-logo.png';
 
 const router = useRouter();
 const route = useRoute();
@@ -132,9 +133,12 @@ const handleReset = async () => {
 }
 
 .logo {
-  text-align: center;
-  font-size: 32px;
-  margin-bottom: 10px;
+  display: block;
+  height: 56px;
+  width: auto;
+  max-width: 240px;
+  object-fit: contain;
+  margin: 0 auto 16px;
 }
 
 h2 {

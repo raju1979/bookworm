@@ -1,7 +1,7 @@
 <template>
   <div class="signup-container">
     <div class="signup-card">
-      <h1 class="logo">📚 Bookworm</h1>
+      <img :src="logoUrl" alt="BookWorm" class="logo" />
       <h2>Create Account</h2>
 
       <div v-if="error" class="error-message">{{ error }}</div>
@@ -28,6 +28,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { authService } from '../services/authService';
 import { ensureUserProfile } from '../services/ensureUserProfile';
+import logoUrl from '../assets/bookworm-logo.png';
 
 const router = useRouter();
 const error = ref('');
@@ -72,9 +73,12 @@ const handleGoogleSignup = async () => {
 }
 
 .logo {
-  text-align: center;
-  font-size: 32px;
-  margin-bottom: 10px;
+  display: block;
+  height: 56px;
+  width: auto;
+  max-width: 240px;
+  object-fit: contain;
+  margin: 0 auto 16px;
 }
 
 h2 {
