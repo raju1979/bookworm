@@ -40,14 +40,14 @@ jobs:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          RAW_DIR: ${{ secrets.FTP_SERVER_DIR }}
+          FTP_SERVER_DIR: ${{ secrets.FTP_SERVER_DIR }}
         run: |
           set -euo pipefail
 
           : "${FTP_SERVER:?Missing secret FTP_SERVER}"
           : "${FTP_USERNAME:?Missing secret FTP_USERNAME}"
           : "${FTP_PASSWORD:?Missing secret FTP_PASSWORD}"
-          : "${RAW_DIR:?Missing secret FTP_SERVER_DIR}"
+          : "${FTP_SERVER_DIR:?Missing secret FTP_SERVER_DIR}"
 
           # Normalize host: users often paste ftp://host:21/ or host/path
           HOST="$FTP_SERVER"
@@ -58,7 +58,7 @@ jobs:
           HOST="${HOST#"${HOST%%[![:space:]]*}"}"
           HOST="${HOST%"${HOST##*[![:space:]]}"}"
 
-          DIR="${RAW_DIR#/}"
+          DIR="${FTP_SERVER_DIR#/}"
           DIR="${DIR%/}/"
 
           echo "FTP_SERVER raw length=${#FTP_SERVER}"
@@ -100,15 +100,17 @@ jobs:
             exit 1
           fi
 
-          export LFTP_PASSWORD="$FTP_PASSWORD"
-
           echo "=== FTP connect + list ==="
-          CONNECT_OUT=$(lftp -c "
-            set ftp:ssl-allow false;
-            set ftp:passive-mode true;
+          CONNECT_OUT=$(lftp \
+            -u "$FTP_USERNAME","$FTP_PASSWORD" \
+            "ftp://${HOST}:21" \
+            -e "
+            set ftp:ssl-force no;
+            set ftp:ssl-allow no;
+            set ftp:ssl-protect-data no;
+            set ftp:passive-mode yes;
             set net:timeout 30;
             set net:max-retries 2;
-            open -u ${FTP_USERNAME} ftp://${HOST}:21;
             pwd;
             cls -1;
             bye
@@ -130,12 +132,16 @@ jobs:
 
           echo "Final upload dir: $DIR"
 
-          lftp -c "
-            set ftp:ssl-allow false;
-            set ftp:passive-mode true;
+          lftp \
+            -u "$FTP_USERNAME","$FTP_PASSWORD" \
+            "ftp://${HOST}:21" \
+            -e "
+            set ftp:ssl-force no;
+            set ftp:ssl-allow no;
+            set ftp:ssl-protect-data no;
+            set ftp:passive-mode yes;
             set net:timeout 30;
             set net:max-retries 3;
-            open -u ${FTP_USERNAME} ftp://${HOST}:21;
             mkdir -p ${DIR};
             cd ${DIR};
             pwd;
