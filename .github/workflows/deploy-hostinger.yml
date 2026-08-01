@@ -5,8 +5,8 @@
 #                       (e.g. ftp.ajarafashion.com or 82.112.229.227)
 #   FTP_USERNAME
 #   FTP_PASSWORD
-#   FTP_SERVER_DIR      relative to FTP login home — usually: bookworm/
-#                       (if login sees a public_html folder: public_html/bookworm/)
+#   FTP_SERVER_DIR      optional parent prefix only. Remote app folder is always bookworm/
+#                       leave empty / bookworm/  OR  public_html/  if login is account root
 #   DB_USER / DB_PASSWORD / DB_NAME
 #   FIREBASE_PROJECT_ID optional
 #
@@ -81,12 +81,12 @@ jobs:
 
       - name: Show pack output (debug)
         run: |
-          echo "=== dist/deploy ==="
-          ls -la backend-php/dist/deploy/
+          echo "=== dist/bookworm ==="
+          ls -la backend-php/dist/bookworm/
           echo "=== index.html ==="
-          cat backend-php/dist/deploy/index.html
-          test -f backend-php/dist/deploy/bookworm-logo.png
-          test -f backend-php/dist/deploy/index.html
+          cat backend-php/dist/bookworm/index.html
+          test -f backend-php/dist/bookworm/bookworm-logo.png
+          test -f backend-php/dist/bookworm/index.html
 
       - name: Deploy to Hostinger (lftp mirror)
         env:
@@ -100,7 +100,6 @@ jobs:
           : "${FTP_SERVER:?Missing secret FTP_SERVER}"
           : "${FTP_USERNAME:?Missing secret FTP_USERNAME}"
           : "${FTP_PASSWORD:?Missing secret FTP_PASSWORD}"
-          : "${RAW_DIR:?Missing secret FTP_SERVER_DIR}"
 
           HOST="$FTP_SERVER"
           HOST="${HOST#ftp://}"
@@ -110,8 +109,22 @@ jobs:
           HOST="${HOST#"${HOST%%[![:space:]]*}"}"
           HOST="${HOST%"${HOST##*[![:space:]]}"}"
 
-          DIR="${RAW_DIR#/}"
-          DIR="${DIR%/}/"
+          # Remote app folder is always bookworm/ (never "deploy")
+          PREFIX="${RAW_DIR:-}"
+          PREFIX="${PREFIX#/}"
+          PREFIX="${PREFIX%/}"
+          # Treat mistaken values as empty
+          case "$PREFIX" in
+            ''|bookworm|deploy|knowledge) PREFIX="" ;;
+            public_html|public_html/bookworm) PREFIX="public_html" ;;
+            public_html/*) PREFIX="public_html" ;;
+          esac
+
+          if [[ -n "$PREFIX" ]]; then
+            DIR="${PREFIX}/bookworm/"
+          else
+            DIR="bookworm/"
+          fi
 
           echo "FTP host=$HOST user=$FTP_USERNAME dir=$DIR"
 
@@ -150,10 +163,16 @@ jobs:
           TOP_LIST=$(printf '%s\n' "$CONNECT_OUT" | tr -d '\r')
 
           if printf '%s\n' "$TOP_LIST" | grep -qx 'public_html'; then
-            echo "Login home is account root (sees public_html/)"
+            echo "Login home is account root — using public_html/bookworm/"
+            DIR="public_html/bookworm/"
           elif [[ "$DIR" == public_html/* ]]; then
             DIR="${DIR#public_html/}"
             echo "Stripped leading public_html/ → using: $DIR"
+          fi
+
+          # Final guard: never upload to a folder named deploy
+          if [[ "$DIR" == *deploy* ]]; then
+            DIR="bookworm/"
           fi
 
           echo "Mirroring to: $DIR"
@@ -178,7 +197,7 @@ jobs:
               --exclude-glob 'bookworm-hostinger.zip' \
               --exclude-glob '.ftp-deploy-sync-state.json' \
               --exclude-glob hello-world.txt \
-              ./backend-php/dist/deploy/ ${DIR};
+              ./backend-php/dist/bookworm/ ${DIR};
             echo '=== remote listing after mirror ===';
             ls -la ${DIR};
             echo '=== remote index.html ===';
