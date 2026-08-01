@@ -2,15 +2,23 @@
 
 ## Current mode: hello-world only
 
-`Deploy Hostinger` on push to `main` uploads **only** `hello-world.txt` to `FTP_SERVER_DIR`. No frontend/PHP build.
+Uploads only `hello-world.txt` to `FTP_SERVER_DIR` (no site build).
+
+## Fix: `Name or service not known`
+
+`FTP_SERVER` must be a **hostname or IP** that resolves in DNS — copy it from **hPanel → Files → FTP Accounts → Hostname**.
+
+| Correct | Wrong |
+|---------|--------|
+| `ftp.ajarafashion.com` | `ftp://ftp.ajarafashion.com` |
+| `82.112.229.227` | `public_html` / `public_html/knowledge` |
+| | FTP username |
+| | folder path |
+
+Also set:
 
 | Secret | Example |
 |--------|---------|
-| `FTP_SERVER` | Hostinger FTP hostname or IP |
-| `FTP_USERNAME` | FTP user |
-| `FTP_PASSWORD` | … |
-| `FTP_SERVER_DIR` | `knowledge/` (if login is already in public_html) |
-
-Plain FTP port 21. Leading `public_html/` is auto-stripped when the FTP home does not list a `public_html` folder.
-
-After a green run, check FileZilla for `knowledge/hello-world.txt` (or whatever path you set).
+| `FTP_USERNAME` | from FTP Accounts |
+| `FTP_PASSWORD` | from FTP Accounts |
+| `FTP_SERVER_DIR` | `knowledge/` |

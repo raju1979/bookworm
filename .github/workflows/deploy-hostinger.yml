@@ -1,9 +1,12 @@
 # Temporary: FTP smoke deploy only (no frontend/PHP build).
 # Uploads hello-world.txt to FTP_SERVER_DIR on push to main.
 #
-# Secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD, FTP_SERVER_DIR
-# FTP_SERVER = host from hPanel → Files → FTP Accounts (hostname preferred over IP)
-# FTP_SERVER_DIR = knowledge/  (relative to FTP login home; no leading slash)
+# Secrets:
+#   FTP_SERVER       hostname OR IP only — e.g. ftp.ajarafashion.com or 82.112.229.227
+#                    NOT ftp://..., NOT a path, NOT the username
+#   FTP_USERNAME     from hPanel → Files → FTP Accounts
+#   FTP_PASSWORD
+#   FTP_SERVER_DIR   e.g. knowledge/
 
 name: Deploy Hostinger
 
@@ -23,7 +26,7 @@ jobs:
 
     steps:
       - name: Install tools
-        run: sudo apt-get update && sudo apt-get install -y lftp netcat-openbsd
+        run: sudo apt-get update && sudo apt-get install -y lftp netcat-openbsd dnsutils
 
       - name: Create hello-world.txt
         run: |
@@ -46,24 +49,54 @@ jobs:
           : "${FTP_PASSWORD:?Missing secret FTP_PASSWORD}"
           : "${RAW_DIR:?Missing secret FTP_SERVER_DIR}"
 
+          # Normalize host: users often paste ftp://host:21/ or host/path
+          HOST="$FTP_SERVER"
+          HOST="${HOST#ftp://}"
+          HOST="${HOST#ftps://}"
+          HOST="${HOST%%/*}"          # drop path
+          HOST="${HOST%%:*}"          # drop :port if present
+          HOST="${HOST#"${HOST%%[![:space:]]*}"}"
+          HOST="${HOST%"${HOST##*[![:space:]]}"}"
+
           DIR="${RAW_DIR#/}"
           DIR="${DIR%/}/"
 
-          echo "FTP_SERVER=$FTP_SERVER"
+          echo "FTP_SERVER raw length=${#FTP_SERVER}"
+          echo "FTP_SERVER normalized=$HOST"
           echo "FTP_USERNAME=$FTP_USERNAME"
           echo "FTP_PASSWORD length=${#FTP_PASSWORD}"
           echo "FTP_SERVER_DIR=$DIR"
 
-          echo "=== TCP probe port 21 ==="
-          if nc -z -w 10 "$FTP_SERVER" 21; then
-            echo "Port 21 is open"
-          else
-            echo "::error::Cannot reach ${FTP_SERVER}:21 from GitHub Actions"
-            echo "In hPanel: enable FTP, and disable IP restrictions (or allow all) for this FTP account."
+          if [[ -z "$HOST" ]]; then
+            echo "::error::FTP_SERVER is empty after normalizing"
             exit 1
           fi
 
-          # Password via env so special chars (@ # $ ! etc.) do not break lftp -u user,pass
+          if [[ "$HOST" == *"@"* ]] || [[ "$HOST" == *" "* ]]; then
+            echo "::error::FTP_SERVER looks invalid. Use only hostname or IP (no user@, no spaces)."
+            exit 1
+          fi
+
+          echo "=== DNS lookup ==="
+          if getent hosts "$HOST" || host "$HOST"; then
+            echo "DNS OK"
+          else
+            echo "::error::DNS cannot resolve FTP_SERVER='$HOST'"
+            echo "Fix GitHub secret FTP_SERVER to the FTP hostname or IP from hPanel → Files → FTP Accounts."
+            echo "Examples: ftp.yourdomain.com   OR   82.112.229.227"
+            echo "Do NOT use: ftp://..., public_html, a folder path, or the FTP username."
+            exit 1
+          fi
+
+          echo "=== TCP probe port 21 ==="
+          if nc -z -w 10 "$HOST" 21; then
+            echo "Port 21 is open"
+          else
+            echo "::error::Cannot reach ${HOST}:21 from GitHub Actions"
+            echo "In hPanel: enable FTP; disable IP restrictions for this FTP account."
+            exit 1
+          fi
+
           export LFTP_PASSWORD="$FTP_PASSWORD"
 
           echo "=== FTP connect + list ==="
@@ -72,15 +105,13 @@ jobs:
             set ftp:passive-mode true;
             set net:timeout 30;
             set net:max-retries 2;
-            open -u ${FTP_USERNAME} ftp://${FTP_SERVER}:21;
+            open -u ${FTP_USERNAME} ftp://${HOST}:21;
             pwd;
             cls -1;
             bye
           " 2>&1) || {
             echo "$CONNECT_OUT"
-            echo "::error::FTP open/login failed."
-            echo "Use the exact host/user/pass from hPanel → Files → FTP Accounts (same as FileZilla plain FTP)."
-            echo "If FileZilla works from your PC but this fails: Hostinger IP restriction is blocking GitHub."
+            echo "::error::FTP open/login failed for host=$HOST user=$FTP_USERNAME"
             exit 1
           }
           echo "$CONNECT_OUT"
@@ -101,7 +132,7 @@ jobs:
             set ftp:passive-mode true;
             set net:timeout 30;
             set net:max-retries 3;
-            open -u ${FTP_USERNAME} ftp://${FTP_SERVER}:21;
+            open -u ${FTP_USERNAME} ftp://${HOST}:21;
             mkdir -p ${DIR};
             cd ${DIR};
             pwd;
