@@ -44,3 +44,14 @@ The workflow also auto-strips a leading `public_html/` when the FTP home does no
 | `FIREBASE_PROJECT_ID` | `bookworm-6c9ec` |
 
 Deploy uses **lftp mirror --delete** over plain FTP so files are force-replaced.
+
+## FTP Hello World Test
+
+To verify credentials/path without a full build:
+
+1. Push the workflow (or merge to `main`)
+2. **Actions → FTP Hello World Test → Run workflow**
+3. Set `remote_dir` to e.g. `knowledge/` (if login is already in `public_html`) or `public_html/knowledge/` (if you see `public_html` at login)
+4. Confirm `hello-world.txt` appears in FileZilla at that path
+
+This workflow only needs `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` — it ignores `FTP_SERVER_DIR`.

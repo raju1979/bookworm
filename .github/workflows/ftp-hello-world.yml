@@ -1,0 +1,98 @@
+# Minimal FTP smoke test — uploads hello-world.txt only (no build).
+#
+# Secrets (same as Deploy Hostinger):
+#   FTP_SERVER, FTP_USERNAME, FTP_PASSWORD
+#
+# Run: Actions → FTP Hello World Test → Run workflow
+# Set remote_dir relative to FTP login home, e.g.:
+#   knowledge/          (if login is already inside public_html)
+#   public_html/knowledge/  (if login is account root and you see public_html/)
+#
+# Leading slash is stripped. Do NOT use /public_html/... absolute paths.
+
+name: FTP Hello World Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      remote_dir:
+        description: 'FTP path relative to login home (e.g. knowledge/ or public_html/knowledge/)'
+        required: true
+        default: 'knowledge/'
+
+jobs:
+  ftp-hello:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      - name: Create hello-world.txt
+        run: |
+          mkdir -p /tmp/ftp-hello
+          printf 'hello world from GitHub Actions\nuploaded_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > /tmp/ftp-hello/hello-world.txt
+          cat /tmp/ftp-hello/hello-world.txt
+
+      - name: Probe FTP home + upload
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          RAW_DIR: ${{ inputs.remote_dir }}
+        run: |
+          set -euo pipefail
+          : "${FTP_SERVER:?Missing secret FTP_SERVER}"
+          : "${FTP_USERNAME:?Missing secret FTP_USERNAME}"
+          : "${FTP_PASSWORD:?Missing secret FTP_PASSWORD}"
+
+          DIR="${RAW_DIR:?}"
+          DIR="${DIR#/}"          # drop leading slash
+          DIR="${DIR%/}/"         # ensure trailing slash
+
+          echo "FTP_SERVER=$FTP_SERVER"
+          echo "FTP_USERNAME=$FTP_USERNAME"
+          echo "Requested remote_dir=$DIR"
+
+          TOP_LIST=$(lftp -c "
+            set ftp:ssl-allow false;
+            set ftp:passive-mode true;
+            set net:timeout 30;
+            open -u ${FTP_USERNAME},${FTP_PASSWORD} ftp://${FTP_SERVER}:21;
+            pwd;
+            echo '=== top-level listing ===';
+            cls -1;
+          " | tr -d '\r')
+
+          echo "$TOP_LIST"
+
+          if printf '%s\n' "$TOP_LIST" | grep -qx 'public_html'; then
+            echo "Login home looks like account root (sees public_html/)"
+          else
+            echo "Login home does NOT list public_html/ — paths are relative to public_html already"
+            if [[ "$DIR" == public_html/* ]]; then
+              DIR="${DIR#public_html/}"
+              echo "Auto-stripped leading public_html/ → using: $DIR"
+            fi
+          fi
+
+          echo "Final upload dir: $DIR"
+
+          lftp -c "
+            set ftp:ssl-allow false;
+            set ftp:passive-mode true;
+            set net:timeout 30;
+            set net:max-retries 3;
+            open -u ${FTP_USERNAME},${FTP_PASSWORD} ftp://${FTP_SERVER}:21;
+            mkdir -p ${DIR};
+            cd ${DIR};
+            pwd;
+            put /tmp/ftp-hello/hello-world.txt -o hello-world.txt;
+            ls -la;
+            echo '=== hello-world.txt contents on server ===';
+            cat hello-world.txt;
+          "
+
+          echo "OK — check FileZilla for ${DIR}hello-world.txt"
