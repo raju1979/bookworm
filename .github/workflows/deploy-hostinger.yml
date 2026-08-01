@@ -77,14 +77,17 @@ jobs:
             exit 1
           fi
 
-          echo "=== DNS lookup ==="
-          if getent hosts "$HOST" || host "$HOST"; then
+          echo "=== Host validation ==="
+          if [[ "$HOST" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+            # A numeric IP does not need a reverse-DNS (PTR) record. The previous
+            # `host` check incorrectly rejected valid IPs when reverse DNS returned
+            # NXDOMAIN. The TCP probe below is the authoritative connectivity test.
+            echo "Numeric IPv4 address supplied; skipping reverse-DNS lookup"
+          elif getent ahostsv4 "$HOST" >/dev/null 2>&1; then
             echo "DNS OK"
           else
-            echo "::error::DNS cannot resolve FTP_SERVER='$HOST'"
-            echo "Fix GitHub secret FTP_SERVER to the FTP hostname or IP from hPanel → Files → FTP Accounts."
-            echo "Examples: ftp.yourdomain.com   OR   82.112.229.227"
-            echo "Do NOT use: ftp://..., public_html, a folder path, or the FTP username."
+            echo "::error::DNS cannot resolve the FTP hostname"
+            echo "Fix FTP_SERVER to the hostname or IP from hPanel → Files → FTP Accounts."
             exit 1
           fi
 
