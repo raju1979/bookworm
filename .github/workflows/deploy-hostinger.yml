@@ -2,7 +2,8 @@
 # Uploads hello-world.txt to FTP_SERVER_DIR on push to main.
 #
 # Secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD, FTP_SERVER_DIR
-# Example FTP_SERVER_DIR: knowledge/  (or bookworm/ once verified)
+# FTP_SERVER = host from hPanel → Files → FTP Accounts (hostname preferred over IP)
+# FTP_SERVER_DIR = knowledge/  (relative to FTP login home; no leading slash)
 
 name: Deploy Hostinger
 
@@ -21,8 +22,8 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Install lftp
-        run: sudo apt-get update && sudo apt-get install -y lftp
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y lftp netcat-openbsd
 
       - name: Create hello-world.txt
         run: |
@@ -31,73 +32,84 @@ jobs:
             > /tmp/ftp-hello/hello-world.txt
           cat /tmp/ftp-hello/hello-world.txt
 
-      - name: Normalize FTP remote dir
-        id: ftpdir
+      - name: Upload hello-world.txt via FTP
         env:
-          RAW_DIR: ${{ secrets.FTP_SERVER_DIR }}
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          RAW_DIR: ${{ secrets.FTP_SERVER_DIR }}
         run: |
           set -euo pipefail
-          DIR="${RAW_DIR:?Missing secret FTP_SERVER_DIR}"
-          DIR="${DIR#/}"
+
+          : "${FTP_SERVER:?Missing secret FTP_SERVER}"
+          : "${FTP_USERNAME:?Missing secret FTP_USERNAME}"
+          : "${FTP_PASSWORD:?Missing secret FTP_PASSWORD}"
+          : "${RAW_DIR:?Missing secret FTP_SERVER_DIR}"
+
+          DIR="${RAW_DIR#/}"
           DIR="${DIR%/}/"
 
-          : "${FTP_SERVER:?}"
-          : "${FTP_USERNAME:?}"
-          : "${FTP_PASSWORD:?}"
+          echo "FTP_SERVER=$FTP_SERVER"
+          echo "FTP_USERNAME=$FTP_USERNAME"
+          echo "FTP_PASSWORD length=${#FTP_PASSWORD}"
+          echo "FTP_SERVER_DIR=$DIR"
 
-          TOP_LIST=$(lftp -c "
+          echo "=== TCP probe port 21 ==="
+          if nc -z -w 10 "$FTP_SERVER" 21; then
+            echo "Port 21 is open"
+          else
+            echo "::error::Cannot reach ${FTP_SERVER}:21 from GitHub Actions"
+            echo "In hPanel: enable FTP, and disable IP restrictions (or allow all) for this FTP account."
+            exit 1
+          fi
+
+          # Password via env so special chars (@ # $ ! etc.) do not break lftp -u user,pass
+          export LFTP_PASSWORD="$FTP_PASSWORD"
+
+          echo "=== FTP connect + list ==="
+          CONNECT_OUT=$(lftp -c "
             set ftp:ssl-allow false;
             set ftp:passive-mode true;
             set net:timeout 30;
-            open -u ${FTP_USERNAME},${FTP_PASSWORD} ftp://${FTP_SERVER}:21;
+            set net:max-retries 2;
+            open -u ${FTP_USERNAME} ftp://${FTP_SERVER}:21;
             pwd;
-            echo '=== top-level listing ===';
             cls -1;
-          " | tr -d '\r' || true)
+            bye
+          " 2>&1) || {
+            echo "$CONNECT_OUT"
+            echo "::error::FTP open/login failed."
+            echo "Use the exact host/user/pass from hPanel → Files → FTP Accounts (same as FileZilla plain FTP)."
+            echo "If FileZilla works from your PC but this fails: Hostinger IP restriction is blocking GitHub."
+            exit 1
+          }
+          echo "$CONNECT_OUT"
 
-          echo "$TOP_LIST"
+          TOP_LIST=$(printf '%s\n' "$CONNECT_OUT" | tr -d '\r')
 
           if printf '%s\n' "$TOP_LIST" | grep -qx 'public_html'; then
             echo "Login home is account root (sees public_html/)"
-          else
-            if [[ "$DIR" == public_html/* ]]; then
-              DIR="${DIR#public_html/}"
-              echo "Stripped leading public_html/ → FTP home is already public_html"
-            fi
+          elif [[ "$DIR" == public_html/* ]]; then
+            DIR="${DIR#public_html/}"
+            echo "Stripped leading public_html/ → using: $DIR"
           fi
 
-          echo "server_dir=$DIR" >> "$GITHUB_OUTPUT"
-          echo "Using FTP remote dir: $DIR"
-
-      - name: Upload hello-world.txt
-        env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_SERVER_DIR: ${{ steps.ftpdir.outputs.server_dir }}
-        run: |
-          set -euo pipefail
-          : "${FTP_SERVER:?}"
-          : "${FTP_USERNAME:?}"
-          : "${FTP_PASSWORD:?}"
-          : "${FTP_SERVER_DIR:?}"
+          echo "Final upload dir: $DIR"
 
           lftp -c "
             set ftp:ssl-allow false;
             set ftp:passive-mode true;
             set net:timeout 30;
             set net:max-retries 3;
-            open -u ${FTP_USERNAME},${FTP_PASSWORD} ftp://${FTP_SERVER}:21;
-            mkdir -p ${FTP_SERVER_DIR};
-            cd ${FTP_SERVER_DIR};
+            open -u ${FTP_USERNAME} ftp://${FTP_SERVER}:21;
+            mkdir -p ${DIR};
+            cd ${DIR};
             pwd;
             put /tmp/ftp-hello/hello-world.txt -o hello-world.txt;
             ls -la;
             echo '=== hello-world.txt on server ===';
             cat hello-world.txt;
+            bye
           "
 
-          echo "OK — ${FTP_SERVER_DIR}hello-world.txt"
+          echo "OK — ${DIR}hello-world.txt"
