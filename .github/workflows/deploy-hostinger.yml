@@ -1,18 +1,17 @@
 # Deploy BookWorm (Vue + PHP) to Hostinger on push to main.
 #
-# Your FileZilla test shows FTP works at IP 82.112.229.227:21 (plain FTP, no TLS).
-# GitHub previously timed out because FTP_SERVER pointed at the wrong host/IPs.
-#
 # Secrets:
-#   FTP_SERVER          Use 82.112.229.227  (or the exact host from hPanel FTP Accounts)
-#   FTP_USERNAME        u409673832...
+#   FTP_SERVER          Hostinger FTP hostname or IP (hPanel → Files → FTP Accounts)
+#   FTP_USERNAME
 #   FTP_PASSWORD
-#   FTP_SERVER_DIR      /public_html/bookworm/   (trailing slash recommended)
+#   FTP_SERVER_DIR      IMPORTANT: path relative to FTP login home.
+#                       If FileZilla opens in public_html already, use: bookworm/
+#                       If FileZilla opens at account root, use: public_html/bookworm/
 #   DB_USER / DB_PASSWORD / DB_NAME
 #   FIREBASE_PROJECT_ID optional
 #
-# FileZilla local tip: for a secure client use Protocol=SFTP, Port=65002.
-# This workflow uses plain FTP to match what your server accepts on :21.
+# Protocol: FTPS (explicit TLS on port 21). Hostinger shared hosting supports
+# FTP/FTPS — not the same as SFTP (SSH, usually port 65002).
 
 name: Deploy Hostinger
 
@@ -28,7 +27,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -41,8 +40,8 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install zip
-        run: sudo apt-get update && sudo apt-get install -y zip
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y zip lftp
 
       - name: Install frontend deps
         working-directory: frontend
@@ -81,6 +80,15 @@ jobs:
         working-directory: backend-php
         run: npm run pack:web
 
+      - name: Show pack output (debug)
+        run: |
+          echo "=== dist/deploy ==="
+          ls -la backend-php/dist/deploy/
+          echo "=== index.html ==="
+          cat backend-php/dist/deploy/index.html
+          test -f backend-php/dist/deploy/bookworm-logo.png
+          test -f backend-php/dist/deploy/index.html
+
       - name: Normalize FTP remote dir
         id: ftpdir
         env:
@@ -88,34 +96,48 @@ jobs:
         run: |
           set -euo pipefail
           DIR="${RAW_DIR:?Missing secret FTP_SERVER_DIR}"
-          DIR="${DIR%/}/"
+          DIR="${DIR#/}"          # drop leading slash (FTP paths are usually relative)
+          DIR="${DIR%/}/"         # ensure trailing slash
           echo "server_dir=$DIR" >> "$GITHUB_OUTPUT"
-          echo "Using server-dir: $DIR"
+          echo "Using FTP remote dir: $DIR"
 
-      - name: Deploy to Hostinger (FTP)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftp
-          port: 21
-          local-dir: ./backend-php/dist/deploy/
-          server-dir: ${{ steps.ftpdir.outputs.server_dir }}
-          dangerous-clean-slate: false
-          exclude: |
-            **/.git*
-            **/UPLOAD.txt
+      # Force full overwrite with lftp (FTP-Deploy-Action was skipping / not replacing)
+      - name: Deploy to Hostinger (lftp mirror)
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_SERVER_DIR: ${{ steps.ftpdir.outputs.server_dir }}
+        run: |
+          set -euo pipefail
+          : "${FTP_SERVER:?}"
+          : "${FTP_USERNAME:?}"
+          : "${FTP_PASSWORD:?}"
+          : "${FTP_SERVER_DIR:?}"
 
-      # Fallback if FTP is blocked from GitHub: comment the step above and uncomment this.
-      # Hostinger shared SFTP is usually port 65002.
-      # - name: Deploy to Hostinger (SFTP fallback)
-      #   uses: wlixcc/SFTP-Deploy-Action@v1.2.4
-      #   with:
-      #     server: ${{ secrets.FTP_SERVER }}
-      #     username: ${{ secrets.FTP_USERNAME }}
-      #     password: ${{ secrets.FTP_PASSWORD }}
-      #     port: '65002'
-      #     local_path: './backend-php/dist/deploy/*'
-      #     remote_path: ${{ secrets.FTP_SERVER_DIR }}
-      #     sftpArgs: '-o StrictHostKeyChecking=no'
+          # Hostinger: FTPS explicit TLS on :21 (not SFTP/SSH :65002)
+          lftp -c "
+            set ftp:ssl-allow true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ssl:verify-certificate no;
+            set ftp:passive-mode true;
+            set net:timeout 30;
+            set net:max-retries 5;
+            set net:reconnect-interval-base 5;
+            set mirror:parallel-transfer-count 3;
+            open -u ${FTP_USERNAME},${FTP_PASSWORD} ftps://${FTP_SERVER}:21;
+            pwd;
+            ls;
+            mirror -R --delete --verbose \
+              --exclude-glob .git* \
+              --exclude-glob UPLOAD.txt \
+              --exclude-glob '__MACOSX/**' \
+              --exclude-glob 'bookworm-hostinger.zip' \
+              --exclude-glob '.ftp-deploy-sync-state.json' \
+              ./backend-php/dist/deploy/ ${FTP_SERVER_DIR};
+            echo '=== remote listing after mirror ===';
+            ls -la ${FTP_SERVER_DIR};
+            echo '=== remote index.html ===';
+            cat ${FTP_SERVER_DIR}index.html || cat ${FTP_SERVER_DIR}/index.html || true;
+          "

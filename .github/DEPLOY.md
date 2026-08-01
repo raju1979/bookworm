@@ -1,24 +1,42 @@
-# GitHub Actions → Hostinger (SFTP)
+# GitHub Actions → Hostinger
 
-## Why not FTP?
-GitHub runners often **time out on port 21**. Hostinger shared hosting expects **SFTP on port 65002**.
+## FTP vs FTPS vs SFTP
+
+Deploy uses **FTPS** (FTP over TLS, port **21**).
+
+| Protocol | Port (Hostinger shared) | Used by this workflow? |
+|----------|-------------------------|------------------------|
+| FTP / FTPS | 21 | Yes (FTPS) |
+| SFTP (SSH) | 65002 | No — different protocol |
+
+If FileZilla / an action says *“Failed to connect… server only supports SFTP”*:
+1. In FileZilla set protocol to **FTP - File Transfer Protocol** and encryption to **Require explicit FTP over TLS**, port **21** (not SFTP).
+2. Confirm `FTP_SERVER` is the host from **hPanel → Files → FTP Accounts** (hostname or IP), not an SSH-only host.
+3. Confirm username/password match that FTP account.
+
+## If files don’t update on Hostinger
+
+1. In FileZilla, note the **first folder you see after connect**.
+2. Set `FTP_SERVER_DIR` accordingly:
+
+| FileZilla starts in | Set `FTP_SERVER_DIR` to |
+|---------------------|-------------------------|
+| `public_html` | `bookworm/` |
+| account root (`u409673832`) | `public_html/bookworm/` |
+| already inside `bookworm` | `./` or empty → use `.` carefully; prefer `bookworm/` from parent |
+
+3. Delete junk on server: `__MACOSX`, `bookworm-hostinger.zip`, `UPLOAD.txt`
+4. Re-run **Actions → Deploy Hostinger**
 
 ## Secrets
 
-| Secret | Value |
-|--------|--------|
-| `FTP_SERVER` | From hPanel → **FTP Accounts** / **SSH Access** (e.g. `srv1674.hstgr.io`) — not a random web IP |
-| `FTP_USERNAME` | FTP/SSH user |
-| `FTP_PASSWORD` | FTP/SSH password |
-| `FTP_PORT` | `65002` (optional; workflow defaults to this) |
-| `FTP_SERVER_DIR` | e.g. `/public_html/bookworm` or `/home/uXXXX/public_html/bookworm` |
+| Secret | Example |
+|--------|---------|
+| `FTP_SERVER` | Hostinger FTP hostname or IP |
+| `FTP_USERNAME` | `u409673832` |
+| `FTP_PASSWORD` | … |
+| `FTP_SERVER_DIR` | `bookworm/` (most common if FTP home is `public_html`) |
 | `DB_USER` / `DB_PASSWORD` / `DB_NAME` | MySQL |
 | `FIREBASE_PROJECT_ID` | `bookworm-6c9ec` |
 
-## Hostinger checklist
-1. hPanel → enable **SFTP** / SSH remote access if offered  
-2. Confirm host + port **65002** in SSH/FTP details  
-3. Path must be the real folder for `bookworm` (File Manager path)
-
-## Run
-Push to `main` or **Actions → Deploy Hostinger → Run workflow**.
+Deploy uses **lftp mirror --delete** over FTPS so files are force-replaced.
