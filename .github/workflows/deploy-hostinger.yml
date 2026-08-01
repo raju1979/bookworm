@@ -93,11 +93,41 @@ jobs:
         id: ftpdir
         env:
           RAW_DIR: ${{ secrets.FTP_SERVER_DIR }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
           set -euo pipefail
           DIR="${RAW_DIR:?Missing secret FTP_SERVER_DIR}"
           DIR="${DIR#/}"          # drop leading slash (FTP paths are usually relative)
           DIR="${DIR%/}/"         # ensure trailing slash
+
+          : "${FTP_SERVER:?}"
+          : "${FTP_USERNAME:?}"
+          : "${FTP_PASSWORD:?}"
+
+          # Probe login home: if already inside public_html, do NOT prepend public_html/
+          # (avoids public_html/public_html/bookworm/)
+          TOP_LIST=$(lftp -c "
+            set ftp:ssl-allow false;
+            set ftp:passive-mode true;
+            set net:timeout 30;
+            open -u ${FTP_USERNAME},${FTP_PASSWORD} ftp://${FTP_SERVER}:21;
+            cls -1;
+          " | tr -d '\r' || true)
+
+          echo "=== FTP login top-level ==="
+          echo "$TOP_LIST"
+
+          if printf '%s\n' "$TOP_LIST" | grep -qx 'public_html'; then
+            echo "Login home is account root (sees public_html/)"
+          else
+            if [[ "$DIR" == public_html/* ]]; then
+              DIR="${DIR#public_html/}"
+              echo "Stripped leading public_html/ → FTP home is already public_html"
+            fi
+          fi
+
           echo "server_dir=$DIR" >> "$GITHUB_OUTPUT"
           echo "Using FTP remote dir: $DIR"
 

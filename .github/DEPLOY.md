@@ -12,18 +12,24 @@ Deploy uses **plain FTP** (port **21**) — matching FileZilla “plain FTP” f
 
 In FileZilla use **FTP** + **Only use plain FTP (insecure)**, port **21**. Update GitHub secrets `FTP_USERNAME` / `FTP_PASSWORD` to the new FTP user.
 
-## If files don’t update on Hostinger
+## Nested `public_html/public_html` bug
 
-1. In FileZilla, note the **first folder you see after connect**.
-2. Set `FTP_SERVER_DIR` accordingly:
+New Hostinger FTP users often log in **already inside** `public_html`.
 
 | FileZilla starts in | Set `FTP_SERVER_DIR` to |
 |---------------------|-------------------------|
-| `public_html` | `bookworm/` |
-| account root (`u409673832`) | `public_html/bookworm/` |
-| already inside `bookworm` | `./` or empty → use `.` carefully; prefer `bookworm/` from parent |
+| contents of site (`bookworm`, `.htaccess`, …) — **no** `public_html` folder | `bookworm/` |
+| account root with a `public_html` folder visible | `public_html/bookworm/` |
 
-3. Delete junk on server: `__MACOSX`, `bookworm-hostinger.zip`, `UPLOAD.txt`
+If you see `public_html/public_html/bookworm/`, the secret had an extra `public_html/`. Change it to `bookworm/`, delete the nested folder in FileZilla, re-run deploy.
+
+The workflow also auto-strips a leading `public_html/` when the FTP home does not list a `public_html` directory.
+
+## If files don’t update on Hostinger
+
+1. In FileZilla, note the **first folder you see after connect**.
+2. Set `FTP_SERVER_DIR` using the table above.
+3. Delete junk on server: nested `public_html`, `__MACOSX`, `bookworm-hostinger.zip`, `UPLOAD.txt`
 4. Re-run **Actions → Deploy Hostinger**
 
 ## Secrets
@@ -31,9 +37,9 @@ In FileZilla use **FTP** + **Only use plain FTP (insecure)**, port **21**. Updat
 | Secret | Example |
 |--------|---------|
 | `FTP_SERVER` | Hostinger FTP hostname or IP |
-| `FTP_USERNAME` | `u409673832` |
+| `FTP_USERNAME` | new FTP user |
 | `FTP_PASSWORD` | … |
-| `FTP_SERVER_DIR` | `bookworm/` (most common if FTP home is `public_html`) |
+| `FTP_SERVER_DIR` | `bookworm/` (typical for FTP users chrooted to public_html) |
 | `DB_USER` / `DB_PASSWORD` / `DB_NAME` | MySQL |
 | `FIREBASE_PROJECT_ID` | `bookworm-6c9ec` |
 
