@@ -1,17 +1,18 @@
 # Deploy BookWorm (Vue + PHP) to Hostinger on push to main.
 #
-# Repo → Settings → Secrets and variables → Actions → New repository secret:
+# Your FileZilla test shows FTP works at IP 82.112.229.227:21 (plain FTP, no TLS).
+# GitHub previously timed out because FTP_SERVER pointed at the wrong host/IPs.
 #
-#   FTP_SERVER          e.g. ftp.ajarafashion.com  (or Hostinger FTP hostname)
-#   FTP_USERNAME        Hostinger FTP user
-#   FTP_PASSWORD        Hostinger FTP password
-#   FTP_SERVER_DIR      e.g. /public_html/bookworm/
-#   DB_USER             e.g. u409673832_bookworm
-#   DB_PASSWORD         MySQL password
-#   DB_NAME             e.g. u409673832_bookwork
-#   FIREBASE_PROJECT_ID e.g. bookworm-6c9ec  (optional; defaults below)
+# Secrets:
+#   FTP_SERVER          Use 82.112.229.227  (or the exact host from hPanel FTP Accounts)
+#   FTP_USERNAME        u409673832...
+#   FTP_PASSWORD
+#   FTP_SERVER_DIR      /public_html/bookworm/   (trailing slash recommended)
+#   DB_USER / DB_PASSWORD / DB_NAME
+#   FIREBASE_PROJECT_ID optional
 #
-# Manual run: Actions → Deploy Hostinger → Run workflow
+# FileZilla local tip: for a secure client use Protocol=SFTP, Port=65002.
+# This workflow uses plain FTP to match what your server accepts on :21.
 
 name: Deploy Hostinger
 
@@ -27,7 +28,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -80,15 +81,31 @@ jobs:
         working-directory: backend-php
         run: npm run pack:web
 
+      # Plain FTP — matches FileZilla (server has no FTP-TLS)
       - name: Deploy to Hostinger (FTP)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
           local-dir: ./backend-php/dist/deploy/
           server-dir: ${{ secrets.FTP_SERVER_DIR }}
           dangerous-clean-slate: false
           exclude: |
             **/.git*
             **/UPLOAD.txt
+
+      # Fallback if FTP is blocked from GitHub: comment the step above and uncomment this.
+      # Hostinger shared SFTP is usually port 65002.
+      # - name: Deploy to Hostinger (SFTP fallback)
+      #   uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+      #   with:
+      #     server: ${{ secrets.FTP_SERVER }}
+      #     username: ${{ secrets.FTP_USERNAME }}
+      #     password: ${{ secrets.FTP_PASSWORD }}
+      #     port: '65002'
+      #     local_path: './backend-php/dist/deploy/*'
+      #     remote_path: ${{ secrets.FTP_SERVER_DIR }}
+      #     sftpArgs: '-o StrictHostKeyChecking=no'

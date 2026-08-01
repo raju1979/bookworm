@@ -1,32 +1,24 @@
-# GitHub Actions → Hostinger
+# GitHub Actions → Hostinger (SFTP)
 
-## One-time setup
+## Why not FTP?
+GitHub runners often **time out on port 21**. Hostinger shared hosting expects **SFTP on port 65002**.
 
-1. Push this repo to GitHub (`main` branch).
-2. Repo **Settings → Secrets and variables → Actions** → add:
+## Secrets
 
-| Secret | Example |
-|--------|---------|
-| `FTP_SERVER` | Hostinger FTP host (hPanel → Files → FTP accounts) |
-| `FTP_USERNAME` | FTP username |
-| `FTP_PASSWORD` | FTP password |
-| `FTP_SERVER_DIR` | `/public_html/bookworm/` |
-| `DB_USER` | `u409673832_bookworm` |
-| `DB_PASSWORD` | MySQL password |
-| `DB_NAME` | `u409673832_bookwork` |
-| `FIREBASE_PROJECT_ID` | `bookworm-6c9ec` (optional) |
+| Secret | Value |
+|--------|--------|
+| `FTP_SERVER` | From hPanel → **FTP Accounts** / **SSH Access** (e.g. `srv1674.hstgr.io`) — not a random web IP |
+| `FTP_USERNAME` | FTP/SSH user |
+| `FTP_PASSWORD` | FTP/SSH password |
+| `FTP_PORT` | `65002` (optional; workflow defaults to this) |
+| `FTP_SERVER_DIR` | e.g. `/public_html/bookworm` or `/home/uXXXX/public_html/bookworm` |
+| `DB_USER` / `DB_PASSWORD` / `DB_NAME` | MySQL |
+| `FIREBASE_PROJECT_ID` | `bookworm-6c9ec` |
 
-3. Push to `main` (or **Actions → Deploy Hostinger → Run workflow**).
+## Hostinger checklist
+1. hPanel → enable **SFTP** / SSH remote access if offered  
+2. Confirm host + port **65002** in SSH/FTP details  
+3. Path must be the real folder for `bookworm` (File Manager path)
 
-## What it does
-
-- Builds Vue (`/bookworm/` base)
-- Packs PHP API under `backend/`
-- FTPs `backend-php/dist/deploy/` → Hostinger `FTP_SERVER_DIR`
-
-## Local pack (no CI)
-
-```bash
-cd backend-php && npm run pack:web
-# → dist/bookworm-hostinger.zip + dist/deploy/
-```
+## Run
+Push to `main` or **Actions → Deploy Hostinger → Run workflow**.
