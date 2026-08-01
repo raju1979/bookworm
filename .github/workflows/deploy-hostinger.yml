@@ -1,0 +1,94 @@
+# Deploy BookWorm (Vue + PHP) to Hostinger on push to main.
+#
+# Repo → Settings → Secrets and variables → Actions → New repository secret:
+#
+#   FTP_SERVER          e.g. ftp.ajarafashion.com  (or Hostinger FTP hostname)
+#   FTP_USERNAME        Hostinger FTP user
+#   FTP_PASSWORD        Hostinger FTP password
+#   FTP_SERVER_DIR      e.g. /public_html/bookworm/
+#   DB_USER             e.g. u409673832_bookworm
+#   DB_PASSWORD         MySQL password
+#   DB_NAME             e.g. u409673832_bookwork
+#   FIREBASE_PROJECT_ID e.g. bookworm-6c9ec  (optional; defaults below)
+#
+# Manual run: Actions → Deploy Hostinger → Run workflow
+
+name: Deploy Hostinger
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hostinger
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install zip
+        run: sudo apt-get update && sudo apt-get install -y zip
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Write PHP production env
+        working-directory: backend-php
+        env:
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          : "${DB_USER:?Missing secret DB_USER}"
+          : "${DB_PASSWORD:?Missing secret DB_PASSWORD}"
+          : "${DB_NAME:?Missing secret DB_NAME}"
+          PROJECT_ID="${FIREBASE_PROJECT_ID:-bookworm-6c9ec}"
+          printf '%s\n' \
+            "NODE_ENV=production" \
+            "APP_ENV=production" \
+            "DB_DIALECT=mysql" \
+            "DB_HOST=localhost" \
+            "DB_PORT=3306" \
+            "DB_USER=${DB_USER}" \
+            "DB_PASSWORD=${DB_PASSWORD}" \
+            "DB_NAME=${DB_NAME}" \
+            "FIREBASE_PROJECT_ID=${PROJECT_ID}" \
+            "APP_BASE=/bookworm/backend" \
+            "CORS_ORIGINS=https://ajarafashion.com,https://www.ajarafashion.com" \
+            "ENFORCE_ORIGIN_WHITELIST=true" \
+            "ORIGIN_ALLOW_EMPTY=false" \
+            > .env.production
+
+      - name: Pack web + PHP for Hostinger
+        working-directory: backend-php
+        run: npm run pack:web
+
+      - name: Deploy to Hostinger (FTP)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./backend-php/dist/deploy/
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/UPLOAD.txt

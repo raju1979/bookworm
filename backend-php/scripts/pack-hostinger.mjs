@@ -167,13 +167,18 @@ function main() {
   });
   if (zip.status !== 0) fail('zip command failed — is `zip` installed?');
 
+  // Keep an unzipped copy for CI / FTP deploy (and local inspection)
+  const deployDir = join(DIST, 'deploy');
+  rmSync(deployDir, { recursive: true, force: true });
+  cpSync(STAGE, deployDir, { recursive: true });
   rmSync(STAGE, { recursive: true, force: true });
 
   const kb = (statSync(OUT_ZIP).size / 1024).toFixed(1);
   console.log(`✔ Created ${relative(ROOT, OUT_ZIP)} (${kb} KiB)`);
+  console.log(`✔ Deploy folder ${relative(ROOT, deployDir)}/`);
   console.log('  API path:  /bookworm/backend  (local serve.sh still http://127.0.0.1:3080)');
   if (WITH_WEB) console.log('  Web path:  /bookworm/');
-  console.log('\nUpload → public_html/bookworm/ → Extract');
+  console.log('\nUpload → public_html/bookworm/ → Extract  (or FTP dist/deploy/)');
 }
 
 main();
