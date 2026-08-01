@@ -37,7 +37,9 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import logoUrl from './assets/bookworm-logo.png';
+
+// Served from /public so Hostinger CDN doesn't break Vite-hashed PNG assets
+const logoUrl = `${import.meta.env.BASE_URL}bookworm-logo.png`;
 
 const route = useRoute();
 const activeTab = ref('home');
@@ -63,7 +65,7 @@ watch(
 }
 
 .header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   color: white;
   padding: 10px 20px;
   text-align: center;

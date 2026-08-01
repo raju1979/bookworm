@@ -56,7 +56,8 @@ import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { authService } from '../services/authService';
 import { getPasswordPolicyHint, validatePassword } from '../utils/passwordPolicy';
-import logoUrl from '../assets/bookworm-logo.png';
+
+const logoUrl = `${import.meta.env.BASE_URL}bookworm-logo.png`;
 
 const router = useRouter();
 const route = useRoute();

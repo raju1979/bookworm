@@ -24,6 +24,9 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # Let the PHP API under /bookworm/backend/ handle itself
 RewriteRule ^backend(/|$) - [L]
 
+# Never SPA-fallback built assets (avoid HTML for missing JS/CSS/images)
+RewriteRule ^assets/ - [L]
+
 # Existing files (JS/CSS/images) serve normally
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
