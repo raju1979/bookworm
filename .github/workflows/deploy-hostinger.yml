@@ -1,17 +1,8 @@
-# Deploy BookWorm (Vue + PHP) to Hostinger on push to main.
+# Temporary: FTP smoke deploy only (no frontend/PHP build).
+# Uploads hello-world.txt to FTP_SERVER_DIR on push to main.
 #
-# Secrets:
-#   FTP_SERVER          Hostinger FTP hostname or IP (hPanel → Files → FTP Accounts)
-#   FTP_USERNAME
-#   FTP_PASSWORD
-#   FTP_SERVER_DIR      IMPORTANT: path relative to FTP login home.
-#                       If FileZilla opens in public_html already, use: bookworm/
-#                       If FileZilla opens at account root, use: public_html/bookworm/
-#   DB_USER / DB_PASSWORD / DB_NAME
-#   FIREBASE_PROJECT_ID optional
-#
-# Protocol: plain FTP on port 21 (this Hostinger FTP account has no FTPS).
-# Not SFTP/SSH (usually port 65002).
+# Secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD, FTP_SERVER_DIR
+# Example FTP_SERVER_DIR: knowledge/  (or bookworm/ once verified)
 
 name: Deploy Hostinger
 
@@ -27,67 +18,18 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install tools
-        run: sudo apt-get update && sudo apt-get install -y zip lftp
-
-      - name: Install frontend deps
-        working-directory: frontend
-        run: npm ci
-
-      - name: Write PHP production env
-        working-directory: backend-php
-        env:
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+      - name: Create hello-world.txt
         run: |
-          set -euo pipefail
-          : "${DB_USER:?Missing secret DB_USER}"
-          : "${DB_PASSWORD:?Missing secret DB_PASSWORD}"
-          : "${DB_NAME:?Missing secret DB_NAME}"
-          PROJECT_ID="${FIREBASE_PROJECT_ID:-bookworm-6c9ec}"
-          printf '%s\n' \
-            "NODE_ENV=production" \
-            "APP_ENV=production" \
-            "DB_DIALECT=mysql" \
-            "DB_HOST=localhost" \
-            "DB_PORT=3306" \
-            "DB_USER=${DB_USER}" \
-            "DB_PASSWORD=${DB_PASSWORD}" \
-            "DB_NAME=${DB_NAME}" \
-            "FIREBASE_PROJECT_ID=${PROJECT_ID}" \
-            "APP_BASE=/bookworm/backend" \
-            "CORS_ORIGINS=https://ajarafashion.com,https://www.ajarafashion.com" \
-            "ENFORCE_ORIGIN_WHITELIST=true" \
-            "ORIGIN_ALLOW_EMPTY=false" \
-            > .env.production
-
-      - name: Pack web + PHP for Hostinger
-        working-directory: backend-php
-        run: npm run pack:web
-
-      - name: Show pack output (debug)
-        run: |
-          echo "=== dist/deploy ==="
-          ls -la backend-php/dist/deploy/
-          echo "=== index.html ==="
-          cat backend-php/dist/deploy/index.html
-          test -f backend-php/dist/deploy/bookworm-logo.png
-          test -f backend-php/dist/deploy/index.html
+          mkdir -p /tmp/ftp-hello
+          printf 'hello world from GitHub Actions\nuploaded_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > /tmp/ftp-hello/hello-world.txt
+          cat /tmp/ftp-hello/hello-world.txt
 
       - name: Normalize FTP remote dir
         id: ftpdir
@@ -99,24 +41,23 @@ jobs:
         run: |
           set -euo pipefail
           DIR="${RAW_DIR:?Missing secret FTP_SERVER_DIR}"
-          DIR="${DIR#/}"          # drop leading slash (FTP paths are usually relative)
-          DIR="${DIR%/}/"         # ensure trailing slash
+          DIR="${DIR#/}"
+          DIR="${DIR%/}/"
 
           : "${FTP_SERVER:?}"
           : "${FTP_USERNAME:?}"
           : "${FTP_PASSWORD:?}"
 
-          # Probe login home: if already inside public_html, do NOT prepend public_html/
-          # (avoids public_html/public_html/bookworm/)
           TOP_LIST=$(lftp -c "
             set ftp:ssl-allow false;
             set ftp:passive-mode true;
             set net:timeout 30;
             open -u ${FTP_USERNAME},${FTP_PASSWORD} ftp://${FTP_SERVER}:21;
+            pwd;
+            echo '=== top-level listing ===';
             cls -1;
           " | tr -d '\r' || true)
 
-          echo "=== FTP login top-level ==="
           echo "$TOP_LIST"
 
           if printf '%s\n' "$TOP_LIST" | grep -qx 'public_html'; then
@@ -131,8 +72,7 @@ jobs:
           echo "server_dir=$DIR" >> "$GITHUB_OUTPUT"
           echo "Using FTP remote dir: $DIR"
 
-      # Force full overwrite with lftp (FTP-Deploy-Action was skipping / not replacing)
-      - name: Deploy to Hostinger (lftp mirror)
+      - name: Upload hello-world.txt
         env:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
@@ -145,26 +85,19 @@ jobs:
           : "${FTP_PASSWORD:?}"
           : "${FTP_SERVER_DIR:?}"
 
-          # Plain FTP only — this account rejects FTPS (gnutls_handshake error)
           lftp -c "
             set ftp:ssl-allow false;
             set ftp:passive-mode true;
             set net:timeout 30;
-            set net:max-retries 5;
-            set net:reconnect-interval-base 5;
-            set mirror:parallel-transfer-count 3;
+            set net:max-retries 3;
             open -u ${FTP_USERNAME},${FTP_PASSWORD} ftp://${FTP_SERVER}:21;
+            mkdir -p ${FTP_SERVER_DIR};
+            cd ${FTP_SERVER_DIR};
             pwd;
-            ls;
-            mirror -R --delete --verbose \
-              --exclude-glob .git* \
-              --exclude-glob UPLOAD.txt \
-              --exclude-glob '__MACOSX/**' \
-              --exclude-glob 'bookworm-hostinger.zip' \
-              --exclude-glob '.ftp-deploy-sync-state.json' \
-              ./backend-php/dist/deploy/ ${FTP_SERVER_DIR};
-            echo '=== remote listing after mirror ===';
-            ls -la ${FTP_SERVER_DIR};
-            echo '=== remote index.html ===';
-            cat ${FTP_SERVER_DIR}index.html;
+            put /tmp/ftp-hello/hello-world.txt -o hello-world.txt;
+            ls -la;
+            echo '=== hello-world.txt on server ===';
+            cat hello-world.txt;
           "
+
+          echo "OK — ${FTP_SERVER_DIR}hello-world.txt"
