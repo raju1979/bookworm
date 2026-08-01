@@ -2,17 +2,15 @@
 
 ## FTP vs FTPS vs SFTP
 
-Deploy uses **FTPS** (FTP over TLS, port **21**).
+Deploy uses **plain FTP** (port **21**) — matching FileZilla “plain FTP” for this Hostinger account.
 
 | Protocol | Port (Hostinger shared) | Used by this workflow? |
 |----------|-------------------------|------------------------|
-| FTP / FTPS | 21 | Yes (FTPS) |
-| SFTP (SSH) | 65002 | No — different protocol |
+| Plain FTP | 21 | Yes |
+| FTPS | 21 | No (this account rejects TLS) |
+| SFTP (SSH) | 65002 | No |
 
-If FileZilla / an action says *“Failed to connect… server only supports SFTP”*:
-1. In FileZilla set protocol to **FTP - File Transfer Protocol** and encryption to **Require explicit FTP over TLS**, port **21** (not SFTP).
-2. Confirm `FTP_SERVER` is the host from **hPanel → Files → FTP Accounts** (hostname or IP), not an SSH-only host.
-3. Confirm username/password match that FTP account.
+In FileZilla use **FTP** + **Only use plain FTP (insecure)**, port **21**. Update GitHub secrets `FTP_USERNAME` / `FTP_PASSWORD` to the new FTP user.
 
 ## If files don’t update on Hostinger
 
@@ -39,4 +37,4 @@ If FileZilla / an action says *“Failed to connect… server only supports SFTP
 | `DB_USER` / `DB_PASSWORD` / `DB_NAME` | MySQL |
 | `FIREBASE_PROJECT_ID` | `bookworm-6c9ec` |
 
-Deploy uses **lftp mirror --delete** over FTPS so files are force-replaced.
+Deploy uses **lftp mirror --delete** over plain FTP so files are force-replaced.

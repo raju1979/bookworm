@@ -10,8 +10,8 @@
 #   DB_USER / DB_PASSWORD / DB_NAME
 #   FIREBASE_PROJECT_ID optional
 #
-# Protocol: FTPS (explicit TLS on port 21). Hostinger shared hosting supports
-# FTP/FTPS — not the same as SFTP (SSH, usually port 65002).
+# Protocol: plain FTP on port 21 (this Hostinger FTP account has no FTPS).
+# Not SFTP/SSH (usually port 65002).
 
 name: Deploy Hostinger
 
@@ -115,18 +115,15 @@ jobs:
           : "${FTP_PASSWORD:?}"
           : "${FTP_SERVER_DIR:?}"
 
-          # Hostinger: FTPS explicit TLS on :21 (not SFTP/SSH :65002)
+          # Plain FTP only — this account rejects FTPS (gnutls_handshake error)
           lftp -c "
-            set ftp:ssl-allow true;
-            set ftp:ssl-force true;
-            set ftp:ssl-protect-data true;
-            set ssl:verify-certificate no;
+            set ftp:ssl-allow false;
             set ftp:passive-mode true;
             set net:timeout 30;
             set net:max-retries 5;
             set net:reconnect-interval-base 5;
             set mirror:parallel-transfer-count 3;
-            open -u ${FTP_USERNAME},${FTP_PASSWORD} ftps://${FTP_SERVER}:21;
+            open -u ${FTP_USERNAME},${FTP_PASSWORD} ftp://${FTP_SERVER}:21;
             pwd;
             ls;
             mirror -R --delete --verbose \
@@ -139,5 +136,5 @@ jobs:
             echo '=== remote listing after mirror ===';
             ls -la ${FTP_SERVER_DIR};
             echo '=== remote index.html ===';
-            cat ${FTP_SERVER_DIR}index.html || cat ${FTP_SERVER_DIR}/index.html || true;
+            cat ${FTP_SERVER_DIR}index.html;
           "
